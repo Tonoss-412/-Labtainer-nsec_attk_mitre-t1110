@@ -31,9 +31,6 @@ RUN sed -i 's/#LogLevel INFO/LogLevel VERBOSE/' /etc/ssh/sshd_config && \
     echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config && \
     service ssh restart
 
-# Tạo file mục tiêu với metadata
-RUN echo "This is a sensitive file." > /home/$user_name/important_file.txt
-RUN touch -t 202001010101 /home/$user_name/important_file.txt
 
 # Create log directory and initialize log file
 RUN mkdir -p /var/log && touch /var/log/ssh.log && \
