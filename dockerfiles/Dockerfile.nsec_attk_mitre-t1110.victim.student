@@ -1,0 +1,49 @@
+# Labtainer Dockerfile - Server
+ARG registry
+FROM $registry/labtainer.network2
+FROM $registry/labtainer.network.ssh2
+
+# Thông tin cơ bản
+ARG lab
+ARG labdir
+ARG imagedir
+ARG user_name
+ARG password
+ARG apt_source
+ARG version
+LABEL version=$version
+ENV APT_SOURCE $apt_source
+RUN /usr/bin/apt-source.sh
+
+# Cài đặt các gói cần thiết
+RUN apt-get update && apt-get install -y \
+    openssh-server \
+    rsyslog \
+    vim
+
+# Tạo người dùng và cấu hình SSH
+RUN useradd -ms /bin/bash $user_name
+RUN echo "$user_name:$password" | chpasswd
+RUN adduser $user_name sudo
+
+# Configure SSH logging level to verbose
+RUN sed -i 's/#LogLevel INFO/LogLevel VERBOSE/' /etc/ssh/sshd_config && \
+    echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config && \
+    service ssh restart
+
+# Tạo file mục tiêu với metadata
+RUN echo "This is a sensitive file." > /home/$user_name/important_file.txt
+RUN touch -t 202001010101 /home/$user_name/important_file.txt
+
+# Create log directory and initialize log file
+RUN mkdir -p /var/log && touch /var/log/ssh.log && \
+    chown syslog:adm /var/log/ssh.log
+
+# Thêm file lab vào home
+ADD $labdir/$imagedir/home_tar/home.tar $HOME
+RUN rm -f $HOME/home.tar
+ADD $labdir/$lab.tar.gz $HOME          
+    
+# Switch back to root to start services
+USER root
+CMD service rsyslog start && service ssh start && tail -f /var/log/ssh.log
